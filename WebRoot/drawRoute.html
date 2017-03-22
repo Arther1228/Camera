@@ -1,0 +1,328 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=7,IE=9, IE=10" />
+<title>两点之间重现率计算</title>
+
+<!-- 初始化ArcGIS JS API -->
+<script type="text/javascript" src="/Camera/commons/scgis/_scgis_inc.js"></script>
+
+<link rel="stylesheet" type="text/css" href="/Camera/skin/darkBlue/css/global.css" />
+
+<script type="text/javascript" src="/Camera/gis/dwgis.js"></script>
+
+<link rel="stylesheet" type="text/css" href="/Camera/skin/nationalDay/css/global.css" />
+<script src="/Camera/scripts/javascript/jquery.js" type="text/javascript"></script>
+<script src="/Camera/scripts/javascript/swep.js" type="text/javascript"></script>
+<script src="/Camera/scripts/javascript/scrollbar.js" type="text/javascript"></script>
+
+<script>
+	dojo.require("esri.map");
+	dojo.require("esri.toolbars.draw");
+	dojo.require("esri.tasks.query");
+	dojo.require("esri.tasks.gp");
+	dojo.require("esri.tasks.route");
+	dojo.require("esri.symbols.SimpleLineSymbol");
+	dojo.require("esri.tasks.BufferParameters");
+	dojo.require("esri.tasks.GeometryService");
+	dojo.require("esri.tasks.RelationParameters");
+	
+	//监听事件变量
+	var mapOnClick_addStops_connect, mapOnClick_addBarriers_connect;
+	//全局变量
+	var resultTemplate;
+	//最近一次的最短路径
+	var lastRoute=null;
+	var lastRouteCameraNum=0;
+	
+	var map ;  //不加这个IE里面就显示不了
+	
+	function init() {
+		map = new esri.Map("map",{
+			logo:false,
+			slider:false,
+			center: [117.28018, 31.865704] //地图加载后，初始位置
+		}); //创建map,加载到地图
+		basemap = new esri.layers.ArcGISDynamicMapServiceLayer("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer");
+		map.addLayer(basemap);
+		//使用代理
+		esriConfig.defaults.io.proxyUrl = "proxy.jsp";
+		esriConfig.defaults.io.alwaysUseProxy = true; 
+		
+		toolbar1 = new esri.toolbars.Draw(map);
+		dojo.connect(toolbar1, 'onDrawEnd', drawEnd); //给toolbar绑定画完图形的回调函数
+		
+		//定义摄像头符号
+		stateSymbolO = new esri.symbol.PictureMarkerSymbol("/Camera/skin/darkBlue/images/a0.png", 10, 10);
+		//扇形可视域的符号--红色
+		polySymbolRed = new esri.symbol.SimpleFillSymbol();
+		polySymbolRed.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 0, 0, 0.5 ]), 1));
+		polySymbolRed.setColor(new dojo.Color([ 255, 0, 0, 0.5 ]));
+		//高亮可视域的符号--绿色
+		polySymbolGreen = new esri.symbol.SimpleFillSymbol();
+		polySymbolGreen.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 0, 0, 0.5 ]), 1));
+		polySymbolGreen.setColor(new dojo.Color([ 0, 255, 0, 0.5 ]));
+		//框选多边形符号
+		symbolPolygon = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID,new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASHDOT,new dojo.Color([ 255, 0, 0 ]), 2), new dojo.Color([255, 255, 255, 0.1 ]));
+		
+		//停靠点图层
+		stopGraphicLayer = new esri.layers.GraphicsLayer();       
+		map.addLayer(stopGraphicLayer);
+		//障碍点图层
+		barriersGraphicLayer=new esri.layers.GraphicsLayer();
+		map.addLayer(barriersGraphicLayer);
+		//路径图层
+		routeGraphicLayer=new esri.layers.GraphicsLayer();
+		map.addLayer(routeGraphicLayer);
+		//摄像头扇形可视域图层
+		sectorGraphicLayer = new esri.layers.GraphicsLayer();      //专门保存摄像头可视域的GraphicLayer	
+		map.addLayer(sectorGraphicLayer);
+		//框选多边形的图层
+		polygonGeometryLayer = new esri.layers.GraphicsLayer();
+		map.addLayer(polygonGeometryLayer);
+		//摄像头图层------没有加到map中
+		cameraGraphicLayer = new esri.layers.GraphicsLayer();
+		
+		//停靠点符号
+		//stopSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_CROSS).setSize(15);
+		//stopSymbol.outline.setWidth(2);
+        //障碍点符号
+        //barrierSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_X).setSize(10);
+        //barrierSymbol.outline.setWidth(3).setColor(new dojo.Color([255,0,0]));
+        
+        //起始点符号
+        startSymbol=new esri.symbol.PictureMarkerSymbol("/Camera/skin/darkBlue/images/start.png",30,35);
+		endSymbol=new esri.symbol.PictureMarkerSymbol("/Camera/skin/darkBlue/images/end.png",30,35);
+        //障碍点符号
+		barrierSymbol=new esri.symbol.PictureMarkerSymbol("/Camera/skin/darkBlue/images/barrier.png",25,25);
+        
+        //路径符号
+		routeSymbol = new esri.symbol.SimpleLineSymbol().setColor(new dojo.Color([ 0, 0, 255, 0.5 ])).setWidth(3);
+		routeSymbolbefore=new esri.symbol.SimpleLineSymbol().setColor(new dojo.Color([ 255, 0, 0, 0.5 ])).setWidth(3);
+		
+        routeTask = new esri.tasks.RouteTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/NAServer/Route");
+		//设置路径参数
+		routeParams = new esri.tasks.RouteParameters();
+		routeParams.stops = new esri.tasks.FeatureSet();
+		routeParams.barriers = new esri.tasks.FeatureSet();         //障碍数据集
+		routeParams.outSpatialReference = {"wkid":4326};
+
+		dojo.connect(routeTask, "onSolveComplete", showRoute);
+		dojo.connect(routeTask, "onError", errorHandler);
+		
+		//初始化并执行查询，这些就是加载到地图中的原始点数据
+		var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer/8");
+		var query = new esri.tasks.Query();
+		query.where = " POINT_X <> 0 AND POINT_Y <> 0 ";
+		query.outSpatialReference = {wkid:4326};
+		query.returnGeometry = true;
+		query.outFields = [ "*" ];
+		queryTask.execute(query, addPointsToMap);
+		//信息显示模板
+		resultTemplate = new esri.InfoTemplate("Camera","<tr><td>${OBJECTID}</td><br/><td>${POINT_X}</td><br/><td>${POINT_Y}</td></tr>");
+	}
+
+	//画多边形
+	function drawPolygon() {
+		map.infoWindow.hide();
+		
+		removeEventHandlers();
+		toolbar1.activate(esri.toolbars.Draw.POLYGON);        //激活toolbar1,并且指定你到底要画什么类型的图形
+		//禁用其他几个按钮
+		dojo.byId("AddStops").disabled=true;
+		dojo.byId("addBarriers").disabled=true;
+		dojo.byId("ClearStops").disabled=true;
+		dojo.byId("addBarriers").disabled=true;
+		dojo.byId("clearBarriers").disabled=true;
+		dojo.byId("solveRoute").disabled=true;
+		dojo.byId("clearbutton").disabled=true;
+	}
+	//多边形画完之后执行的函数
+	function drawEnd(geometry) {
+		//禁用其他几个按钮
+		dojo.byId("AddStops").disabled=false;
+		dojo.byId("addBarriers").disabled=false;
+		dojo.byId("ClearStops").disabled=false;
+		dojo.byId("addBarriers").disabled=false;
+		dojo.byId("clearBarriers").disabled=false;
+		dojo.byId("solveRoute").disabled=false;
+		dojo.byId("clearbutton").disabled=false;
+		
+		lastRoute=null;
+		lastRouteCameraNum=0;
+		
+		toolbar1.deactivate();
+		mapClear();
+		map.graphics.clear();   
+		polygonGeometryLayer.clear();
+		sectorGraphicLayer.clear();
+		//设置多边形的图形
+		var graphic = new esri.Graphic(geometry, symbolPolygon);
+		polygonGeometryLayer.add(graphic);          //画出的多边形区域先不加到地图中去
+		findPointsInExtent(geometry);
+	}
+	
+	//开始监听鼠标单击增加起始点的事件
+	function addStops() {
+		removeEventHandlers();
+		//本来dojo.connet不需要返回值的，这样的写法是为了方便removeEventHandlers中的dojo.disconnet的方法来解除监听的
+		mapOnClick_addStops_connect = dojo.connect(map, "onClick", addStop);
+	}
+	//添加起始点
+	function addStop(evt) {
+		if(stopGraphicLayer.graphics.length==0){
+			routeParams.stops.features.push(stopGraphicLayer.add(new esri.Graphic(evt.mapPoint, startSymbol)));
+		}else{
+			routeParams.stops.features.push(stopGraphicLayer.add(new esri.Graphic(evt.mapPoint, endSymbol)));
+		}
+	}
+	//清除所有Stops
+	function clearStops() {
+		removeEventHandlers();
+		for (var i = routeParams.stops.features.length - 1; i >= 0; i--) {
+			stopGraphicLayer.remove(routeParams.stops.features.splice(i, 1)[0]);
+		}
+	}
+	//开始监听鼠标单击增加障碍点的事件
+    function addBarriers() {
+      removeEventHandlers();
+      mapOnClick_addBarriers_connect = dojo.connect(map, "onClick", addBarrier);
+    }
+    //添加障碍点
+    function addBarrier(evt) {
+      //这里的routeParams.barriers是数据集,所以有features的属性
+      routeParams.barriers.features.push(barriersGraphicLayer.add(new esri.Graphic(evt.mapPoint,barrierSymbol)));
+    }
+    //清除所有障碍点
+    function clearBarriers() {
+      removeEventHandlers();
+      for (var i=routeParams.barriers.features.length-1; i>=0; i--) {
+    	  barriersGraphicLayer.remove(routeParams.barriers.features.splice(i, 1)[0]);
+      }
+    }
+	//停止监听添加障碍点和起始点的单击事件
+	function removeEventHandlers() {
+		dojo.disconnect(mapOnClick_addStops_connect);
+		dojo.disconnect(mapOnClick_addBarriers_connect);
+	}
+	
+	//查找路径
+	function solveRoute() {
+		removeEventHandlers();
+		if(routeParams.stops.features.length<2){
+			alert("请先添加起始点!");	return;
+		}else if(routeParams.stops.features.length>2){
+			alert("起始点多于2个,请重新添加!");
+			clearStops();
+			return;
+		}
+		routeTask.solve(routeParams);
+	}
+	
+	//展示路径
+	function showRoute(solveResult) {
+	    //添加新路径之前先清空
+		clearRoutes();
+		map.graphics.clear();   
+		if(lastRoute){
+			routeGraphicLayer.add(lastRoute);	
+		}
+		routeGraphicLayer.add(solveResult.routeResults[0].route.setSymbol(routeSymbol));
+		
+		map.infoWindow.setTitle("重现率比较"); 
+		map.infoWindow.setContent("当前路径的重现次数为："+ Math.ceil(solveResult.routeResults[0].route.attributes.Total_cameraNumbers) + "次.\n"+"上条路径的重现次数为:"+lastRouteCameraNum +"次."); 
+		var CurX  =  polygonGeometryLayer.graphics[0]._extent.xmax; 
+		var CurY  =  (polygonGeometryLayer.graphics[0]._extent.ymax +polygonGeometryLayer.graphics[0]._extent.ymin)/2; 
+		var  CurPos  =  new  esri.geometry.Point(CurX, CurY, map.spatialReference); 
+		map.infoWindow.show(CurPos);
+		map.infoWindow.resize(340,200);
+		
+		doBuffer(solveResult.routeResults[0].route.geometry);        //查缓冲区里面有多少摄像头
+		findSectorByPolygonLine(solveResult.routeResults[0].route.geometry);   //查路径经过多少摄像头可视域
+		
+		//保存结果，用于前后两次路径的比较
+		lastRoute=new esri.Graphic(solveResult.routeResults[0].route.geometry,routeSymbolbefore);
+		lastRouteCameraNum=Math.ceil(solveResult.routeResults[0].route.attributes.Total_cameraNumbers);
+	}
+	//线缓冲区代码
+    function doBuffer(geometry){
+    	//引用缓冲区分析的几何服务
+    	var _geometryServiceURL="http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Utilities/Geometry/GeometryServer";
+    	var geometryService = new esri.tasks.GeometryService(_geometryServiceURL);
+        
+        //定义缓冲区参数
+        var params = new esri.tasks.BufferParameters();
+        params.geometries =[geometry];
+        params.distances =[0.1];
+        params.outSpatialReference = map.spatialReference;
+        params.unit = esri.tasks.GeometryService.UNIT_KILOMETER;
+        params.bufferSpatialReference = new esri.SpatialReference({wkid:32662});
+        params.unionResults = false;
+        //执行缓冲区分析
+        geometryService.buffer(params);
+        
+        //展示查询结果
+        geometryService.on("buffer-complete", function (result) {
+        		var bufferSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SHORTDASHDOTDOT, new dojo.Color([105, 105, 105]), 2), new dojo.Color([255, 255, 0, 0.25]));
+        		var bufferGeometry = result.geometries[0];
+        		//bufferGraphic = new esri.Graphic(bufferGeometry, bufferSymbol);
+        		//map.graphics.add(bufferGraphic);   //不显示缓冲区
+        		findPointsInExtent2(bufferGeometry);
+        	});        	
+    }
+
+	//通过extent参数寻找点
+	function findPointsInExtent2(extent) {
+		dojo.forEach(cameraGraphicLayer.graphics, function(graphic) {
+			if (extent.contains(graphic.geometry)) {
+				map.graphics.add(graphic);
+			}
+		});
+	}
+
+	function addRelateResultsToMap(relatioins) {
+		//alert("重现次数为" + relatioins.length + "次.");
+		var tempSector;
+		for (var i = 0; i < relatioins.length; i++) {
+			map.graphics.add(sectorGraphicLayer.graphics[relatioins[i].geometry1Index].setSymbol(polySymbolGreen));
+		}
+	}
+	//清除地图中的graphics
+	function mapClear() {
+		clearStops();
+		clearBarriers();
+		clearRoutes();
+		map.graphics.clear();
+		polygonGeometryLayer.clear();
+		sectorGraphicLayer.clear();
+		lastRoute=0;
+		lastRouteCameraNum=0;
+	}
+
+	//清除路径
+	function clearRoutes() {
+		routeGraphicLayer.clear();
+	}
+	//查找路径失败的错误信息
+	function errorHandler(err) {
+		alert("查找路径失败或者已无其他路径.");
+	}
+
+	dojo.ready(init);
+</script>
+</head>
+<body class="claro">
+
+<div class="dtB20" style="padding:14px;">
+	<a href="#" id="polygon"  name="polygon" onclick="drawPolygon();"  class="gn1">指定区域</a>
+	<a href="#" id="AddStops" name="AddStops" onclick="addStops();" class="gn1">添加起始点</a>
+	<a href="#" id="ClearStops" name="ClearStops" onclick="clearStops();" class="gn1">清除起始点</a>
+	<a href="#" id="addBarriers" name="addBarriers"	onclick="addBarriers();" class="gn1">施工建议</a>
+	<a href="#" id="clearBarriers" name="clearBarriers" onclick="clearBarriers();" class="gn1">取消建议</a>
+	<a href="#" id="solveRoute" name="solveRoute" onclick="solveRoute();" class="gn1">求解路径</a>
+	<a href="#" id="clearbutton" name="clearbutton" onclick="mapClear();" class="gn1">清除图形</a>
+</div>
+	<div id="map" style="width: 100%; height: 100%;  border: 0px solid #000;"></div>
+</body>
+</html>

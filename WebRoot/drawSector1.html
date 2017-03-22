@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=7,IE=9,IE=10" />
+<title>指定路径重现率计算</title>
+
+<!-- 初始化ArcGIS JS API -->
+<script type="text/javascript" src="/Camera/commons/scgis/_scgis_inc.js"></script>
+
+<link rel="stylesheet" type="text/css" href="/Camera/skin/darkBlue/css/global.css" />
+
+<script type="text/javascript" src="/Camera/gis/dwgis.js"></script>
+
+<link rel="stylesheet" type="text/css" href="/Camera/skin/nationalDay/css/global.css" />
+<script src="/Camera/scripts/javascript/jquery.js" type="text/javascript"></script>
+<script src="/Camera/scripts/javascript/swep.js" type="text/javascript"></script>
+<script src="/Camera/scripts/javascript/scrollbar.js" type="text/javascript"></script>
+
+<script>
+	dojo.require("esri.map");
+	dojo.require("esri.toolbars.draw");
+	dojo.require("esri.tasks.query");
+	dojo.require("esri.tasks.gp");
+	dojo.require("esri.symbols.SimpleLineSymbol");
+	dojo.require("esri.tasks.BufferParameters");
+	dojo.require("esri.tasks.GeometryService");
+	dojo.require("esri.tasks.RelationParameters");
+
+	var map ;  //不加这个IE里面就显示不了
+	
+	function init() {
+		map = new esri.Map("map",{
+			logo:false,
+			slider:false,
+			center: [117.28018, 31.865704] //地图加载后，初始位置
+		}); //创建map,加载到地图
+		//地图图层
+		basemap = new esri.layers.ArcGISDynamicMapServiceLayer("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer");
+		map.addLayer(basemap);
+		
+		//使用代理
+		esriConfig.defaults.io.proxyUrl = "proxy.jsp";
+		esriConfig.defaults.io.alwaysUseProxy = false; 
+		
+		toolbar1 = new esri.toolbars.Draw(map);
+		toolbar2 = new esri.toolbars.Draw(map);
+		
+		dojo.connect(toolbar2, 'onDrawEnd', doIntersect);
+		
+		/*
+	    dojo.connect(map, 'onLoad', function (theMap) {
+	        //resize the map when the browser resizes
+	        dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
+	     });
+		 **/
+		 
+		//定义摄像头符号
+		stateSymbolO = new esri.symbol.PictureMarkerSymbol("/Camera/skin/darkBlue/images/a0.png",10, 10);
+		//扇形符号
+		polySymbolRed = new esri.symbol.SimpleFillSymbol();
+		polySymbolRed.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([ 0,	0, 0, 1]), 1));
+		polySymbolRed.setColor(new dojo.Color([ 255, 0, 0, 0.5]));
+		//高亮可视域的符号--绿色
+		polySymbolGreen = new esri.symbol.SimpleFillSymbol();
+		polySymbolGreen.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([ 0,0, 0, 0.5 ]), 1));
+		polySymbolGreen.setColor(new dojo.Color([ 0, 255, 0, 0.5 ]));
+		
+		//框选多边形符号
+		polygonSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID,new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASHDOT,new dojo.Color([ 255, 0, 0 ]), 2), new dojo.Color([255, 255, 255, 0.1 ]));
+		//路径线符号
+		polyLineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASH, new dojo.Color([ 255, 0, 0 ]), 1);
+		//摄像头点图层
+		cameraGraphicLayer = new esri.layers.GraphicsLayer();      //新建一个layer,用来保存点数据  
+		map.addLayer(cameraGraphicLayer);
+		//摄像头扇形可视域图层
+		sectorGraphicLayer = new esri.layers.GraphicsLayer();      //专门保存摄像头可视域的GraphicLayer
+		map.addLayer(sectorGraphicLayer);
+		
+		//框选多边形的图层
+		polygonGeometryLayer = new esri.layers.GraphicsLayer();
+		map.addLayer(polygonGeometryLayer);
+		//路径图层
+		polylineGraphicLayer = new esri.layers.GraphicsLayer();
+		map.addLayer(polylineGraphicLayer);
+		
+		//初始化并执行查询，这些就是加载到地图中的原始点数据
+		var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer/8");
+		var query = new esri.tasks.Query();
+		query.where = " POINT_X <> 0 AND POINT_Y <> 0 ";
+		query.outSpatialReference = {wkid : 4326};
+		query.returnGeometry = true;
+		query.outFields = [ "*" ];
+		queryTask.execute(query, addPointsToMap1); //query的结果,通过回调函数加载到指定的地图上来
+		//简单的信息窗口
+		resultTemplate = new esri.InfoTemplate("Camera","<tr><td>${OBJECTID}</td><br/><td>${POINT_X}</td><br/><td>${POINT_Y}</td></tr>");
+
+	}
+
+	//把查询到的点加到指定的地图中
+	function addPointsToMap1(featureSet) {
+		var features = featureSet.features;
+		var graphic;
+		for (var i = 0 ; i < features.length; i++) {
+			graphic = features[i];
+			graphic.setSymbol(stateSymbolO);
+			graphic.setInfoTemplate(resultTemplate);
+			cameraGraphicLayer.add(graphic);
+		}
+	}
+	
+	//画折线
+	function drawPolyline() {
+		polylineGraphicLayer.clear();      //清除之前画的线
+		sectorGraphicLayer.clear();
+		map.graphics.clear();
+		toolbar2.activate(esri.toolbars.Draw.POLYLINE);
+		map.infoWindow.hide();
+		//刷新地图
+		mapRefresh();
+	}
+
+	//线缓冲区代码
+	function doIntersect(geometry) {
+		toolbar2.deactivate();
+		var graphic = new esri.Graphic(geometry, polyLineSymbol);
+		polylineGraphicLayer.add(graphic);
+		doBuffer(geometry);        //查缓冲区里面有多少摄像头
+	}
+	
+	//线缓冲区代码
+    function doBuffer(geometry){
+    	//引用缓冲区分析的几何服务
+    	var _geometryServiceURL="http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Utilities/Geometry/GeometryServer";
+    	var geometryService = new esri.tasks.GeometryService(_geometryServiceURL);
+        
+        //定义缓冲区参数
+        var params = new esri.tasks.BufferParameters();
+        params.geometries =[geometry];
+        params.distances =[0.1];
+        params.outSpatialReference = map.spatialReference;
+        params.unit = esri.tasks.GeometryService.UNIT_KILOMETER;
+        params.bufferSpatialReference = new esri.SpatialReference({wkid:32662});
+        params.unionResults = false;
+        //执行缓冲区分析
+        geometryService.buffer(params);
+        
+        //展示查询结果
+        geometryService.on("buffer-complete", function (result) {
+        		var bufferSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SHORTDASHDOTDOT, new dojo.Color([105, 105, 105]), 2), new dojo.Color([255, 255, 0, 0.25]));
+        		var bufferGeometry = result.geometries[0];
+        		findPointsInExtent2(bufferGeometry);
+        	});        	
+    }
+
+	//通过extent参数寻找点
+	function findPointsInExtent2(extent) {
+		dojo.forEach(cameraGraphicLayer.graphics, function(graphic) {
+			if (extent.contains(graphic.geometry)) {
+				map.graphics.add(graphic);
+				drawSector(graphic.attributes.POINT_X, graphic.attributes.POINT_Y,graphic.attributes.RADIUS,graphic.attributes.STARTANGLE,graphic.attributes.ENDANGLE);
+			}
+		});
+		
+		findSectorByPolygonLine(polylineGraphicLayer.graphics[0].geometry);
+	}
+	
+	function addRelateResultsToMap(relatioins) {
+		map.infoWindow.setTitle("重现率"); 
+		map.infoWindow.setContent("当前路径的重现次数为：" + relatioins.length+" 次."); 
+		var CurX  =  polylineGraphicLayer.graphics[0]._extent.xmax; 
+		var CurY  =  (polylineGraphicLayer.graphics[0]._extent.ymax +polylineGraphicLayer.graphics[0]._extent.ymin)/2; 
+		var  CurPos  =  new  esri.geometry.Point(CurX, CurY, map.spatialReference); 
+		map.infoWindow.show(CurPos);
+		map.infoWindow.resize(200,200);
+		
+		for(var i=0;i<relatioins.length;i++){
+			map.graphics.add(sectorGraphicLayer.graphics[relatioins[i].geometry1Index].setSymbol(polySymbolGreen));
+		}
+	}
+	
+	function mapRefresh(){
+		var sectorGraphics = map.extent;
+		sectorGraphics.xmax += 0.00;
+		sectorGraphics.ymax += 0.00;
+		sectorGraphics.xmin -= 0.00;
+		sectorGraphics.ymin -= 0.00;
+		map.setExtent(sectorGraphics);
+	}
+	
+    function mapClear(){
+		map.graphics.clear();		
+		polylineGraphicLayer.clear();      //清除之前画的线
+		polygonGeometryLayer.clear();
+		sectorGraphicLayer.clear();
+		map.infoWindow.hide();
+		mapRefresh();
+		//map.resize();
+    }
+    
+    dojo.ready(init);
+</script>
+
+</head>
+<body class="claro">
+
+<div class="dtB20" style="padding:14px;">
+	<a href="#" id="polylinebuffer" name="polylinebuffer"  onclick="drawPolyline();" class="gn2">指定路径统计重现率</a>
+	<a href="#" id="clearbutton" name="clearbutton" onclick="mapClear();" class="gn1">清除图形</a>
+</div>
+    <div id="map" style="width: 100%; height: 100%; border: 0px solid #000;"></div>
+</body>
+</html>

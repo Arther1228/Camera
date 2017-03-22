@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>点位评价系统</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type" />
+<link rel="stylesheet" type="text/css" href="/Camera/skin/nationalDay/css/global.css" />
+<script src="/Camera/scripts/javascript/jquery.js" type="text/javascript"></script>
+</head>
+
+<body onresize="Resize();" onload="Resize();">
+
+<div style="z-index:1">
+<div class="topXlB">
+<!--  
+<div class="topXl">
+<a href="#">勘测</a>
+<a href="#">开挖</a>
+<a href="#">浇筑</a>
+<a href="#">管线铺设</a>
+</div>
+
+-->
+<!--<div class="topXl2">
+<a href="#">勘测0000</a>
+<a href="#">开挖</a>
+<a href="#">浇筑</a>
+<a href="#">管线铺设</a>
+</div>
+-->
+
+</div>
+</div>
+
+<div style="z-index:1">
+	<iframe id="top_banner"  src="/Camera/Widget/top.html" height="79" scrolling="no"  frameborder="0"></iframe>	
+	<iframe id="nav_banner"  src="/Camera/Widget/navBg.html" height="38" scrolling="no"  frameborder="0"></iframe>	
+</div>
+
+<div style="z-index:1">
+    <div id="divtest"><iframe id="left_menu" class="leftWarp" src="/Camera/Widget/left.html" scrolling="no" width="253" frameborder="0"></iframe></div>
+    <iframe id="mid_body" class="midWarp" src="/Camera/Widget/mid.html" scrolling="no" width="11" frameborder="0"></iframe>
+    <iframe id="right_body" name="right_body" class="rightWarp" src="/Camera/Widget/map.html" scrolling="no" frameborder="0"></iframe>
+</div>
+
+<div style="z-index:1">
+	<iframe id="bottom_banner"  src="/Camera/Widget/bottom.html" height="32" scrolling="no"  frameborder="0"></iframe>	
+</div>
+
+<script type="text/javascript">
+	var flag=true;
+	function ResizeHeigh(id,offset)
+	{
+		try{
+			var winHeight=document.body.clientHeight; 
+			if(winHeight>offset)
+				  document.getElementById(id).style.height=(winHeight-offset)+"px";
+			else document.getElementById(id).style.height="0px";
+		}
+		catch(e)
+		{
+		}
+	}
+	function ResizeWidth(id,offset)
+	{
+		try{
+			var winWidth=document.body.clientWidth; 
+			if(winWidth>offset)
+				  document.getElementById(id).style.width=(winWidth-offset)+"px";
+			else document.getElementById(id).style.width="0px";
+		}
+		catch(e)
+		{
+		}
+	}
+
+	function Resize()
+	{
+		ResizeHeigh("left_menu",149);
+		ResizeHeigh("right_body",149);
+		ResizeHeigh("mid_body",149);
+		if(flag){
+		ResizeWidth("right_body",264);
+		}
+		else{
+		ResizeWidth("right_body",11);
+		}
+		ResizeWidth("top_banner",0);
+		ResizeWidth("nav_banner",0);
+		ResizeWidth("bottom_banner",0);
+	}
+
+	function clickhide()
+	{
+		$("#divtest").hide();
+		ResizeWidth("right_body",11);
+		flag=false;
+	}
+	function clickshow()
+	{
+		$("#divtest").show();
+		ResizeWidth("right_body",264);
+		flag=true;
+	}
+	function hidetopxl(){
+		$("#topXl").hide();
+	}
+	
+	$(document).ready(function(){
+		hidetopxl();
+	});
+		
+</script>
+</body>
+</html>

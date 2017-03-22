@@ -1,0 +1,30 @@
+/*
+Author: Jiang,JiaYong
+Feature: MenuList
+version: 2013/12/03
+Describe: need jquery
+*/
+
+var mouseover_tid = [];
+var mouseout_tid = [];
+$(document).ready(function(){
+	$("#menus > li").each(function(index){
+		$(this).hover(
+			function(){
+				var _self = this;
+				clearTimeout(mouseout_tid[index]);
+				mouseover_tid[index] = setTimeout(function() {
+					$(_self).find("div:eq(1)").slideDown(200); // 找到li下面需要展示的东西，我这里第二个div
+				}, 400);
+			},
+
+			function(){
+				var _self = this;
+				clearTimeout(mouseover_tid[index]);
+				mouseout_tid[index] = setTimeout(function() {
+					$(_self).find("div:eq(1)").slideUp(200); // 找到li下面需要展示的东西，我这里第二个div
+				}, 400);
+			}
+		);
+	});
+});
