@@ -5,7 +5,7 @@ String[] serverUrls = {
   //"<url>[,<token>]"
   //For ex. (secured server): "http://myserver.mycompany.com/arcgis/rest/services,ayn2C2iPvqjeqWoXwV6rjmr43kyo23mhIPnXz2CEiMA6rVu0xR0St8gKsd0olv8a"
   //For ex. (non-secured server): "http://sampleserver1.arcgisonline.com/arcgis/rest/services"
-  "http://192.168.97.24:6080/arcgis/rest/services"
+  "http://192.168.97.192:6080/arcgis/rest/services"
 };
 %>
 <%

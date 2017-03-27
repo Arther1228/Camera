@@ -30,8 +30,18 @@
 		map = new esri.Map("map",{logo:false,slider:false});
 		//地图图层
 		//basemap = new esri.layers.ArcGISDynamicMapServiceLayer("http://192.168.99.231:6080/arcgis/rest/services/Roads/MapServer");
-		basemap = new esri.layers.ArcGISDynamicMapServiceLayer("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer");
-		map.addLayer(basemap);
+		var imageParameters = new esri.layers.ImageParameters();
+		imageParameters.format = "jpeg";  //set the image type to PNG24, note default is PNG8.
+		  //地图图层
+		var PGISMapServerUrl = "http://192.168.97.24:6080/arcgis/rest/services/PCGISTiled/MapServer";
+		tileMapServiceLayer = new esri.layers.ArcGISTiledMapServiceLayer(PGISMapServerUrl, 
+				    { "opacity": 1, "imageParameters": imageParameters });
+
+			/* 	         var regionLayer = new esri.layers.ArcGISDynamicMapServiceLayer("http://172.16.7.26:6080/arcgis/rest/services/PGISRegion/MapServer", { 
+				             "id": "regionLayer", 
+				             "opacity": 1 
+				           }); */ 
+		map.addLayer(tileMapServiceLayer);
 		
 	}
 

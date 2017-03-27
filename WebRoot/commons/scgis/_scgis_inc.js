@@ -1,7 +1,7 @@
 
 var _IP_PRJECT = "192.168.99.192";    //项目所在IP
 var _IP_JS_API = "192.168.99.192";    //JS API所在IP
-var _IP_MAP_API = "192.168.97.24";   //地图服务所在IP
+var _IP_MAP_API = "192.168.99.192";   //地图服务所在IP
 
 var _PORT_IP_PRJECT = 8080;   //项目tomcat端口
 

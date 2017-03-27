@@ -61,9 +61,18 @@
 			slider:false,
 			center: [117.28018, 31.865704] //地图加载后，初始位置
 		}); //创建map,加载到地图
-		basemap = new esri.layers.ArcGISDynamicMapServiceLayer("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer");
-	
-		map.addLayer(basemap);
+		var imageParameters = new esri.layers.ImageParameters();
+		imageParameters.format = "jpeg";  //set the image type to PNG24, note default is PNG8.
+		  //地图图层
+		var PGISMapServerUrl = "http://192.168.97.24:6080/arcgis/rest/services/PCGISTiled/MapServer";
+		tileMapServiceLayer = new esri.layers.ArcGISTiledMapServiceLayer(PGISMapServerUrl, 
+				    { "opacity": 1, "imageParameters": imageParameters });
+
+			/* 	         var regionLayer = new esri.layers.ArcGISDynamicMapServiceLayer("http://172.16.7.26:6080/arcgis/rest/services/PGISRegion/MapServer", { 
+				             "id": "regionLayer", 
+				             "opacity": 1 
+				           }); */ 
+		map.addLayer(tileMapServiceLayer);
 		//使用代理
 		esriConfig.defaults.io.proxyUrl = "proxy.jsp";
 		esriConfig.defaults.io.alwaysUseProxy = false;
@@ -133,7 +142,7 @@
 		dojo.connect(routeTask, "onError", errorHandler);
 
 		//初始化并执行查询，这些就是加载到地图中的原始点数据
-		var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer/8");
+		var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer/7");
 		var query = new esri.tasks.Query();
 		query.where = " POINT_X <> 0 AND POINT_Y <> 0 ";
 		query.outSpatialReference = {wkid : 4326};
