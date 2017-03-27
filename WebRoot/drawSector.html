@@ -33,15 +33,20 @@
 		map = new esri.Map("map",{
 			logo:false,
 			slider:false,
-			center: [117.28018, 31.865704] //地图加载后，初始位置
+			center: [117.27318, 31.862704] //地图加载后，初始位置
 		}); //创建map,加载到地图
-		
+		map.setLevel(16);
 		var imageParameters = new esri.layers.ImageParameters();
 		imageParameters.format = "jpeg";  //set the image type to PNG24, note default is PNG8.
 		  //地图图层
 		var PGISMapServerUrl = "http://192.168.97.24:6080/arcgis/rest/services/PCGISTiled/MapServer";
 		tileMapServiceLayer = new esri.layers.ArcGISTiledMapServiceLayer(PGISMapServerUrl, 
 				    { "opacity": 1, "imageParameters": imageParameters });
+
+			/* 	         var regionLayer = new esri.layers.ArcGISDynamicMapServiceLayer("http://172.16.7.26:6080/arcgis/rest/services/PGISRegion/MapServer", { 
+				             "id": "regionLayer", 
+				             "opacity": 1 
+				           }); */ 
 		map.addLayer(tileMapServiceLayer);
 		
 		//使用代理
@@ -52,6 +57,13 @@
 		toolbar2 = new esri.toolbars.Draw(map);
 		
 		dojo.connect(toolbar2, 'onDrawEnd', doIntersect);
+		
+		/*
+	    dojo.connect(map, 'onLoad', function (theMap) {
+	        //resize the map when the browser resizes
+	        dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
+	     });
+		 **/
 		 
 		//定义摄像头符号
 		stateSymbolO = new esri.symbol.PictureMarkerSymbol("/Camera/skin/darkBlue/images/a0.png",10, 10);
@@ -68,18 +80,12 @@
 		polygonSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID,new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASHDOT,new dojo.Color([ 255, 0, 0 ]), 2), new dojo.Color([255, 255, 255, 0.1 ]));
 		//路径线符号
 		polyLineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASH, new dojo.Color([ 255, 0, 0 ]), 1);
-		//路网线符号
-		polyRoadNetsSymbol = routeSymbol = new esri.symbol.SimpleLineSymbol().setColor(new dojo.Color([ 255, 0, 0, 1 ])).setWidth(3);
-		
 		//摄像头点图层
 		cameraGraphicLayer = new esri.layers.GraphicsLayer();      //新建一个layer,用来保存点数据  
 		map.addLayer(cameraGraphicLayer);
 		//摄像头扇形可视域图层
 		sectorGraphicLayer = new esri.layers.GraphicsLayer();      //专门保存摄像头可视域的GraphicLayer
 		map.addLayer(sectorGraphicLayer);
-		//路网图层
-		roadnetsGraphicLayer = new esri.layers.GraphicsLayer(); 
-		map.addLayer(roadnetsGraphicLayer);
 		
 		//框选多边形的图层
 		polygonGeometryLayer = new esri.layers.GraphicsLayer();
@@ -98,14 +104,7 @@
 		queryTask.execute(query, addPointsToMap1); //query的结果,通过回调函数加载到指定的地图上来
 		//简单的信息窗口
 		resultTemplate = new esri.InfoTemplate("Camera","<tr><td>${OBJECTID}</td><br/><td>${POINT_X}</td><br/><td>${POINT_Y}</td></tr>");
-		
-		var queryTaskforLine = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/RoadNets/MapServer/0");
-		var queryforLine = new esri.tasks.Query();
-		queryforLine.where = " 1 = 1 ";
-		queryforLine.outSpatialReference = {wkid : 4326};
-		queryforLine.returnGeometry = true;
-		queryforLine.outFields = [ "*" ];
-		queryTaskforLine.execute(queryforLine, addRoadNetsToMap); //query的结果,通过回调函数加载到指定的地图上来
+
 	}
 
 	//把查询到的点加到指定的地图中
@@ -120,19 +119,6 @@
 		}
 	}
 	
-	//把查询到的路网加到指定的地图中
-	function addRoadNetsToMap(featureSet) {
-		var features = featureSet.features;
-		var graphic;
-		for (var i = 0 ; i < features.length; i++) {
-			graphic = features[i];
-			graphic.setSymbol(polyRoadNetsSymbol);
-			roadnetsGraphicLayer.add(graphic);
-			map.graphics.add(graphic);
-		}
-		//alert(roadnetsGraphicLayer.graphics.length);
-	}
-	
 	//画折线
 	function drawPolyline() {
 		polylineGraphicLayer.clear();      //清除之前画的线
@@ -143,15 +129,7 @@
 		//刷新地图
 		mapRefresh();
 	}
-	
-	//用线查路网数据
-	function doIntersectLine(geometry) {
-		toolbar2.deactivate();
-		var graphic = new esri.Graphic(geometry, polyLineSymbol);
-		polylineGraphicLayer.add(graphic);
-		findRoadNetsByPolygonLine(geometry);  //查与线相交的路网
-	}
-	
+
 	//线缓冲区代码
 	function doIntersect(geometry) {
 		toolbar2.deactivate();
@@ -169,7 +147,7 @@
         //定义缓冲区参数
         var params = new esri.tasks.BufferParameters();
         params.geometries =[geometry];
-        params.distances =[0.1];
+        params.distances =[0.02];
         params.outSpatialReference = map.spatialReference;
         params.unit = esri.tasks.GeometryService.UNIT_KILOMETER;
         params.bufferSpatialReference = new esri.SpatialReference({wkid:32662});
@@ -179,8 +157,10 @@
         
         //展示查询结果
         geometryService.on("buffer-complete", function (result) {
-        		var bufferSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SHORTDASHDOTDOT, new dojo.Color([105, 105, 105]), 2), new dojo.Color([255, 255, 0, 0.25]));
+        		var bufferSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SHORTDASHDOTDOT, new dojo.Color([105, 105, 105]), 1.5), new dojo.Color([255, 255, 0, 0.25]));
         		var bufferGeometry = result.geometries[0];
+        		var graphic = new esri.Graphic(bufferGeometry, bufferSymbol);
+        		map.graphics.add(graphic);
         		findPointsInExtent2(bufferGeometry);
         	});        	
     }

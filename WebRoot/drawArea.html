@@ -59,8 +59,9 @@
 		map = new esri.Map("map",{
 			logo:false,
 			slider:false,
-			center: [117.28018, 31.865704] //地图加载后，初始位置
+			center: [117.27318, 31.862704] //地图加载后，初始位置
 		}); //创建map,加载到地图
+		map.setLevel(16);
 		var imageParameters = new esri.layers.ImageParameters();
 		imageParameters.format = "jpeg";  //set the image type to PNG24, note default is PNG8.
 		  //地图图层

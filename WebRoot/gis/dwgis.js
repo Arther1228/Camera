@@ -29,6 +29,7 @@ function findPointsInExtent(extent) {
 function drawSector(x, y,radius,startangle,endangle) {
 	var pointNum=30;
 	var apoint = [];
+	radius = 0.0003;
 	apoint = getPoints([ x, y ], radius, startangle, endangle, pointNum);
 
 	var po = {"rings" : [ apoint ],"spatialReference" : {"wkid" : 4326}};

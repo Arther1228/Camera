@@ -27,7 +27,12 @@
 
 	var map ;  //不加这个IE里面就显示不了
 	function init() {
-		map = new esri.Map("map",{logo:false,slider:false});
+		map = new esri.Map("map",{
+			logo:false,
+			slider:false,
+			center: [117.27318, 31.862704] //地图加载后，初始位置
+		}); //创建map,加载到地图
+		map.setLevel(14);
 		//地图图层
 		//basemap = new esri.layers.ArcGISDynamicMapServiceLayer("http://192.168.99.231:6080/arcgis/rest/services/Roads/MapServer");
 		var imageParameters = new esri.layers.ImageParameters();
