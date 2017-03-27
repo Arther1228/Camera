@@ -30,39 +30,47 @@
 	dojo.require("esri.tasks.RelationParameters");
 	dojo.require("esri.tasks.LengthsParameters");
 	
-	
-	//监听事件变量
-	var mapOnClick_addBarriers_connect, mapOnClick_addStartStop_connect;
-	//全局变量
-	var resultTemplate;
-	
-	//以下变量是用来计算最小路径（最小路径相等时，比较路径长度）
-	var lastestResultCount = 0;     //当前最短路径的重现率
-	var lastestRoute = null;        //当前最短路径的graphic
-	var lastestRouteLength = 0;     //当前最短路径的长度
-	var solveResultCount = 0;       //路径求解结果的计数器
-	
-	//以下两个参数是用来控制对话框的出现时刻
-	var prerouteParamsCount = 0;    //提交求解最短路径的计数器
-	var routedParamsCount = 0;      //正在求解最短路径的计数器
-
-	//最近一次的最短路径
-	var lastRoute=null;
-	var lastRouteCameraNum=0;
-	var lastRouteLength=0;
-	
-	var errorCount=0;
-	
 	var map ;  //不加这个IE里面就显示不了
 	
 	function init() {
-		map = new esri.Map("map",{logo:false,slider:false}); //创建map,加载到地图
-		basemap = new esri.layers.ArcGISTiledMapServiceLayer("http://192.168.97.20:8399/arcgis/rest/services/PCGISTiled/MapServer");
-	
-		map.addLayer(basemap);
+		//路网线符号
+		polyRoadNetsSymbol = routeSymbol = new esri.symbol.SimpleLineSymbol().setColor(new dojo.Color([ 255, 0, 0, 1 ])).setWidth(3);
+		//路网图层
+		roadnetsGraphicLayer = new esri.layers.GraphicsLayer(); 
+		map = new esri.Map("map",{logo:false,slider:false});
+		
+		var imageParameters = new esri.layers.ImageParameters();
+		imageParameters.format = "jpeg";  //set the image type to PNG24, note default is PNG8.
+		  //地图图层
+		var PGISMapServerUrl = "http://192.168.97.24:6080/arcgis/rest/services/PCGISTiled/MapServer";
+		tileMapServiceLayer = new esri.layers.ArcGISTiledMapServiceLayer(PGISMapServerUrl, 
+				    { "opacity": 1, "imageParameters": imageParameters });
+		map.addLayer(tileMapServiceLayer);
+		
+		map.addLayer(roadnetsGraphicLayer);
+		
+		var queryTaskforLine = new esri.tasks.QueryTask("http://192.168.99.192:6080/arcgis/rest/services/RoadNets/MapServer/0");
+		var queryforLine = new esri.tasks.Query();
+		queryforLine.where = " 1 = 1 ";
+		queryforLine.outSpatialReference = {wkid : 4326};
+		queryforLine.returnGeometry = true;
+		queryforLine.outFields = [ "*" ];
+		queryTaskforLine.execute(queryforLine, addRoadNetsToMap); //query的结果,通过回调函数加载到指定的地图上来
 	}
 	
-
+	//把查询到的路网加到指定的地图中
+	function addRoadNetsToMap(featureSet) {
+		var features = featureSet.features;
+		var graphic;
+		for (var i = 0 ; i < features.length; i++) {
+			graphic = features[i];
+			graphic.setSymbol(polyRoadNetsSymbol);
+			roadnetsGraphicLayer.add(graphic);
+			map.graphics.add(graphic);
+		}
+		//alert(roadnetsGraphicLayer.graphics.length);
+	}
+	
 	dojo.ready(init);
 	
 </script>

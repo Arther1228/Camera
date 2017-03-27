@@ -96,3 +96,21 @@ function findSectorByPolygonLine(geometry) {
 	geometryService.relation(relationParams, addRelateResultsToMap);
 }
 
+
+//按路径查道路线
+function findRoadNetsByPolygonLine(geometry) {
+	//把
+	
+	var geometryies1Array = new Array();
+	for(var i = 0;i < sectorGraphicLayer.graphics.length ; i++){
+		geometryies1Array[i] = sectorGraphicLayer.graphics[i].geometry;
+	}
+	var _geometryServiceURL = "http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Utilities/Geometry/GeometryServer";
+	var geometryService = new esri.tasks.GeometryService(_geometryServiceURL);
+	var relationParams = new esri.tasks.RelationParameters();
+	relationParams.geometries1 = geometryies1Array;
+	relationParams.geometries2 = [geometry] ;
+	relationParams.relation = esri.tasks.RelationParameters.SPATIAL_REL_INTERSECTION;
+	geometryService.relation(relationParams, addRelateResultsToMap);
+}
+
