@@ -27,7 +27,7 @@
 	dojo.require("esri.tasks.GeometryService");
 	dojo.require("esri.tasks.RelationParameters");
 
-	var map ;  //不加这个IE里面就显示不了
+	var map ;  
 	
 	function init() {
 		map = new esri.Map("map",{
@@ -42,11 +42,6 @@
 		var PGISMapServerUrl = "http://192.168.97.24:6080/arcgis/rest/services/PCGISTiled/MapServer";
 		tileMapServiceLayer = new esri.layers.ArcGISTiledMapServiceLayer(PGISMapServerUrl, 
 				    { "opacity": 1, "imageParameters": imageParameters });
-
-			/* 	         var regionLayer = new esri.layers.ArcGISDynamicMapServiceLayer("http://172.16.7.26:6080/arcgis/rest/services/PGISRegion/MapServer", { 
-				             "id": "regionLayer", 
-				             "opacity": 1 
-				           }); */ 
 		map.addLayer(tileMapServiceLayer);
 		
 		//使用代理
@@ -57,13 +52,6 @@
 		toolbar2 = new esri.toolbars.Draw(map);
 		
 		dojo.connect(toolbar2, 'onDrawEnd', doIntersect);
-		
-		/*
-	    dojo.connect(map, 'onLoad', function (theMap) {
-	        //resize the map when the browser resizes
-	        dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
-	     });
-		 **/
 		 
 		//定义摄像头符号
 		stateSymbolO = new esri.symbol.PictureMarkerSymbol("/Camera/skin/darkBlue/images/a0.png",10, 10);
@@ -76,6 +64,11 @@
 		polySymbolGreen.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([ 0,0, 0, 0.5 ]), 1));
 		polySymbolGreen.setColor(new dojo.Color([ 0, 255, 0, 0.5 ]));
 		
+		//缓冲区的geometry
+		bufferGeometry = null;
+		//缓冲区图层
+		bufferGraphicLayer = new esri.layers.GraphicsLayer(); 
+		map.addLayer(bufferGraphicLayer);
 		//框选多边形符号
 		polygonSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID,new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASHDOT,new dojo.Color([ 255, 0, 0 ]), 2), new dojo.Color([255, 255, 255, 0.1 ]));
 		//路径线符号
@@ -123,6 +116,8 @@
 	function drawPolyline() {
 		polylineGraphicLayer.clear();      //清除之前画的线
 		sectorGraphicLayer.clear();
+		bufferGraphicLayer.clear();
+		bufferGeometry = null;
 		map.graphics.clear();
 		toolbar2.activate(esri.toolbars.Draw.POLYLINE);
 		map.infoWindow.hide();
@@ -134,7 +129,7 @@
 	function doIntersect(geometry) {
 		toolbar2.deactivate();
 		var graphic = new esri.Graphic(geometry, polyLineSymbol);
-		polylineGraphicLayer.add(graphic);
+		//polylineGraphicLayer.add(graphic);
 		doBuffer(geometry);        //查缓冲区里面有多少摄像头
 	}
 	
@@ -147,7 +142,7 @@
         //定义缓冲区参数
         var params = new esri.tasks.BufferParameters();
         params.geometries =[geometry];
-        params.distances =[0.02];
+        params.distances =[0.01];
         params.outSpatialReference = map.spatialReference;
         params.unit = esri.tasks.GeometryService.UNIT_KILOMETER;
         params.bufferSpatialReference = new esri.SpatialReference({wkid:32662});
@@ -158,9 +153,9 @@
         //展示查询结果
         geometryService.on("buffer-complete", function (result) {
         		var bufferSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SHORTDASHDOTDOT, new dojo.Color([105, 105, 105]), 1.5), new dojo.Color([255, 255, 0, 0.25]));
-        		var bufferGeometry = result.geometries[0];
+        		bufferGeometry = result.geometries[0];
         		var graphic = new esri.Graphic(bufferGeometry, bufferSymbol);
-        		map.graphics.add(graphic);
+        		bufferGraphicLayer.add(graphic);
         		findPointsInExtent2(bufferGeometry);
         	});        	
     }
@@ -173,24 +168,26 @@
 				drawSector(graphic.attributes.POINT_X, graphic.attributes.POINT_Y,graphic.attributes.RADIUS,graphic.attributes.STARTANGLE,graphic.attributes.ENDANGLE);
 			}
 		});
-		
-		findSectorByPolygonLine(polylineGraphicLayer.graphics[0].geometry);
+		//根据缓冲区来与扇形求交集
+		findSectorByPolygonLine(bufferGeometry);
 	}
 	
+	//把空间相交得到的graphic加载到地图中
 	function addRelateResultsToMap(relatioins) {
 		map.infoWindow.setTitle("重现率"); 
-		map.infoWindow.setContent("当前路径的重现次数为：" + relatioins.length+" 次."); 
-		var CurX  =  polylineGraphicLayer.graphics[0]._extent.xmax; 
-		var CurY  =  (polylineGraphicLayer.graphics[0]._extent.ymax +polylineGraphicLayer.graphics[0]._extent.ymin)/2; 
+		map.infoWindow.setContent("当前路径的重现次数为：" + relatioins.length + " 次."); 
+  		var CurX  =  bufferGraphicLayer.graphics[0]._extent.xmax; 
+		var CurY  =  (bufferGraphicLayer.graphics[0]._extent.ymax + bufferGraphicLayer.graphics[0]._extent.ymin)/2; 
 		var  CurPos  =  new  esri.geometry.Point(CurX, CurY, map.spatialReference); 
 		map.infoWindow.show(CurPos);
-		map.infoWindow.resize(200,200);
+		map.infoWindow.resize(200,200);  
 		
-		for(var i=0;i<relatioins.length;i++){
+		for(var i = 0; i < relatioins.length; i++){
 			map.graphics.add(sectorGraphicLayer.graphics[relatioins[i].geometry1Index].setSymbol(polySymbolGreen));
 		}
 	}
 	
+	//地图刷新
 	function mapRefresh(){
 		var sectorGraphics = map.extent;
 		sectorGraphics.xmax += 0.00;
@@ -199,15 +196,15 @@
 		sectorGraphics.ymin -= 0.00;
 		map.setExtent(sectorGraphics);
 	}
-	
+	//清除地图
     function mapClear(){
 		map.graphics.clear();		
 		polylineGraphicLayer.clear();      //清除之前画的线
 		polygonGeometryLayer.clear();
 		sectorGraphicLayer.clear();
+		bufferGraphicLayer.clear();
 		map.infoWindow.hide();
 		mapRefresh();
-		//map.resize();
     }
     
     dojo.ready(init);

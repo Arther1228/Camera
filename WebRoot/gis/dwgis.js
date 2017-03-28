@@ -81,12 +81,12 @@ function findSectorByPolygonLine(geometry) {
 		return;
 	}
 	//还原扇形颜色
-	for(var i=0;i<sectorGraphicLayer.graphics.length;i++){
+	for(var i = 0; i < sectorGraphicLayer.graphics.length; i++){
 		sectorGraphicLayer.graphics[i].setSymbol(polySymbolRed);
 	}
 	var geometryies1Array=new Array();
-	for(var i=0;i<sectorGraphicLayer.graphics.length;i++){
-		geometryies1Array[i]=sectorGraphicLayer.graphics[i].geometry;
+	for(var i = 0; i < sectorGraphicLayer.graphics.length; i++){
+		geometryies1Array[i] = sectorGraphicLayer.graphics[i].geometry;
 	}
 	var _geometryServiceURL = "http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Utilities/Geometry/GeometryServer";
 	var geometryService = new esri.tasks.GeometryService(_geometryServiceURL);
@@ -100,11 +100,9 @@ function findSectorByPolygonLine(geometry) {
 
 //按路径查道路线
 function findRoadNetsByPolygonLine(geometry) {
-	//把
-	
 	var geometryies1Array = new Array();
-	for(var i = 0;i < sectorGraphicLayer.graphics.length ; i++){
-		geometryies1Array[i] = sectorGraphicLayer.graphics[i].geometry;
+	for(var i = 0;i < polylineGraphicLayer.graphics.length ; i++){
+		geometryies1Array[i] = polylineGraphicLayer.graphics[i].geometry;
 	}
 	var _geometryServiceURL = "http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Utilities/Geometry/GeometryServer";
 	var geometryService = new esri.tasks.GeometryService(_geometryServiceURL);
@@ -112,6 +110,6 @@ function findRoadNetsByPolygonLine(geometry) {
 	relationParams.geometries1 = geometryies1Array;
 	relationParams.geometries2 = [geometry] ;
 	relationParams.relation = esri.tasks.RelationParameters.SPATIAL_REL_INTERSECTION;
-	geometryService.relation(relationParams, addRelateResultsToMap);
+	geometryService.relation(relationParams, addRelateRoadsToMap);
 }
 

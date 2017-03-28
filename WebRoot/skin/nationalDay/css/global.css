@@ -1,5 +1,5 @@
 /* Global CSS */
-body { background-color:#FEE8D8; line-height:26px; font-size:12px;color:#333; font-family:ËÎÌå; table-layout:fixed;word-break:break-all;word-wrap:break-word; overflow:hidden;}
+body { background-color:#FEE8D8; line-height:26px; font-size:12px;color:#333; font-family:ï¿½ï¿½ï¿½ï¿½; table-layout:fixed;word-break:break-all;word-wrap:break-word; overflow:hidden;}
 body,div,dl,dt,dd,ul,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,img,textarea,blockquote,p {padding:0; margin:0;}   
 ul,li {list-style:none;}
 input,select,textarea,table,td {font-size:12px; table-layout:fixed;word-break:break-all;word-wrap:break-word; overflow:hidden;}
@@ -292,7 +292,7 @@ a.inputTitleSs2:link,a.inputTitleSs2:visited,a.inputTitleSs2:hover{ display:bloc
 .kkListB{ background-image:url(../images/dt24.png);}
 .kkListB2{ margin-left:30px; margin-right:10px;}
 
-.kkTitle{ margin-left:20px; margin-right:20px; font-size:20px; color:#333; font-family:ºÚÌå; line-height:40px;}
+.kkTitle{ margin-left:20px; margin-right:20px; font-size:20px; color:#333; font-family:ï¿½ï¿½ï¿½ï¿½; line-height:40px;}
 .kkTitle2{ color:#333; text-align:left; padding-top:10px; padding-left:4px;}
 .kkTitle3 a{ display:block; width:8px; height:15px; background-image:url(../images/dt36.png);}
 .kkTitle4{ text-align:center; border-bottom:#DDDDDD 1px dashed; margin:0 auto;}
@@ -316,7 +316,7 @@ a.inputTitleSs2:link,a.inputTitleSs2:visited,a.inputTitleSs2:hover{ display:bloc
 .progressZi{ color: #D14805; font-size:14px;}
 
 .buZ{ padding-top:10px;}
-.buZ li{ float:left; height:35px; font-size:18px; font-family:ºÚÌå; color:#3C66A2; margin-right:9px;}
+.buZ li{ float:left; height:35px; font-size:18px; font-family:ï¿½ï¿½ï¿½ï¿½; color:#3C66A2; margin-right:9px;}
 .buZ li img{ margin-top:2px;}
 
 
@@ -527,7 +527,7 @@ a.jftjfx2:link,a.jftjfx2:visited{ width:58px; height:21px; text-align:center; li
 
 .jffz1{ padding:8px;}
 
-.inputFZ{ padding:0 4px; height:23px; line-height:23px; border:1px solid #CCCCCC; background-color:#FFF;}
+.inputFZ{ padding:0 4px; width:120px; height:25px; display: block; float: left; line-height:33px; text-align:center;border:1px solid #CCCCCC; background-color:#FFF;}
 .buttonFZ{ display:block; float: left; height:25px; line-height:25px; text-align:center; padding:0 7px; border:1px solid #CCCCCC; background-color:#F2F2F2;cursor:pointer;}
 .fzlx{ height:265px; width:auto; float:none; margin-left:0px; padding:15px;}
 
