@@ -104,7 +104,7 @@
 		barrierSymbol=new esri.symbol.PictureMarkerSymbol("/Camera/skin/darkBlue/images/barrier.png",25,25);
         
         //路径符号
-		routeSymbol = c
+		routeSymbol = new esri.symbol.SimpleLineSymbol().setColor(new dojo.Color([ 0, 0, 255, 0.5 ])).setWidth(3);
 		routeSymbolbefore=new esri.symbol.SimpleLineSymbol().setColor(new dojo.Color([ 255, 0, 0, 0.5 ])).setWidth(3);
 		
         routeTask = new esri.tasks.RouteTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/NAServer/Route");
