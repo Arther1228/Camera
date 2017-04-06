@@ -163,7 +163,7 @@
     	//设置的阈值
 		var min_weight = $("#min_weight").val();
     	
-    	var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer/6");
+    	var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/testRoads/MapServer/7");
 		var query = new esri.tasks.Query();
 		query.where = "CameraNum <=" +  min_weight;
 		query.outSpatialReference = {wkid:4326};

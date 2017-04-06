@@ -88,7 +88,7 @@
 		map.addLayer(polylineGraphicLayer);
 		
 		//初始化并执行查询，这些就是加载到地图中的原始点数据
-		var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/Roads/MapServer/7");
+		var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/testRoads/MapServer/6");
 		var query = new esri.tasks.Query();
 		query.where = " POINT_X <> 0 AND POINT_Y <> 0 ";
 		query.outSpatialReference = {wkid : 4326};
