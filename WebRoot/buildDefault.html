@@ -127,7 +127,7 @@
 		catch(e){
 			console.log(e);
 		}
-		
+		alert("默认布设摄像机： " +  cameraGraphicLayer.graphics.length +"个.")
 	}
 	
 	//地图刷新
@@ -162,6 +162,9 @@
     	mapClear();
     	//设置的阈值
 		var min_weight = $("#min_weight").val();
+    	if(min_weight == "" || min_weight == undefined){
+    		min_weight = 0;
+    	}
     	
     	var queryTask = new esri.tasks.QueryTask("http://" +_IP_MAP_API + ":6080/arcgis/rest/services/testRoads/MapServer/7");
 		var query = new esri.tasks.Query();
@@ -188,7 +191,7 @@
 <body class="claro">
 
 <div class="dtB20" style="padding:14px;">
-	<input type="text" id="min_weight" name="min_weight" value="0" class="inputFZ">
+	<input type="text" id="min_weight" name="min_weight" value="0" class="inputFZ" style="display:none">
 	<a href="#" id="applyWeight"  name="applyWeight" onclick="applyWeight();"  class="gn1">过滤阈值</a>
 	<a href="#" id="polygon"  name="polygon" onclick="drawPolygon();"  class="gn1">指定区域</a>
 	<a href="#" id="clearbutton" name="clearbutton" onclick="mapClear();" class="gn1">清除图形</a>
